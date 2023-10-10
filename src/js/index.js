@@ -14,6 +14,25 @@ const selectors = {
 let page = 1;
 let loading = false;
 
+const observer = new IntersectionObserver(
+  (entries, observer) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        fetchDataAndUpdateGallery();
+      }
+    });
+  },
+  {
+    root: null,
+    rootMargin: '0px',
+    threshold: 0.1,
+  }
+);
+
+const lightbox = new SimpleLightbox('.gallery a', {
+  close: true,
+});
+
 const fetchDataAndUpdateGallery = async () => {
   const searchQuery = selectors.input.value.trim();
 
@@ -40,10 +59,8 @@ const fetchDataAndUpdateGallery = async () => {
     const data = await fetchData(params);
     const newPhotosMarkup = createMarkup(data.hits);
     selectors.gallery.insertAdjacentHTML('beforeend', newPhotosMarkup);
-
-    new SimpleLightbox('.gallery a', {
-      close: true,
-    });
+    lightbox.refresh();
+    observer.observe(selectors.guard);
 
     if (data.totalHits > 0) {
       Notiflix.Notify.success(`Hooray! We found ${data.totalHits} images.`);
@@ -55,26 +72,13 @@ const fetchDataAndUpdateGallery = async () => {
       return;
     }
   } catch (error) {
-    Notiflix.Notify.failure(error.message);
+    Notiflix.Notify.info(
+      "We're sorry, but you've reached the end of search results."
+    );
   } finally {
     loading = false;
   }
 };
-
-const observer = new IntersectionObserver(
-  (entries, observer) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        fetchDataAndUpdateGallery();
-      }
-    });
-  },
-  {
-    root: null,
-    rootMargin: '0px',
-    threshold: 0.1,
-  }
-);
 
 selectors.form.addEventListener('submit', event => {
   event.preventDefault();
@@ -82,5 +86,3 @@ selectors.form.addEventListener('submit', event => {
   selectors.gallery.innerHTML = '';
   fetchDataAndUpdateGallery();
 });
-
-observer.observe(selectors.guard);
